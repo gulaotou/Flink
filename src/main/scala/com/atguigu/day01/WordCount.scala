@@ -35,5 +35,7 @@ object WordCount {
 
     // 执行计算逻辑
     env.execute()
+
+    println("11111111")
   }
 }
