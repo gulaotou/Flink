@@ -1,6 +1,5 @@
 package com.atguigu.day03
 
-import com.atguigu.day02.{SensorReading, SensorSource}
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.time.Time
