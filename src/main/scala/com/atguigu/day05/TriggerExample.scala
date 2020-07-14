@@ -35,6 +35,7 @@ object TriggerExample {
     env.execute()
   }
 
+  // 只在整数秒和窗口结束时间时触发窗口计算！
   class OneSecondIntervalTrigger extends Trigger[(String, Long), TimeWindow] {
     // 每来一条数据都要调用一次！
     override def onElement(element: (String, Long), timestamp: Long, window: TimeWindow, ctx: TriggerContext): TriggerResult = {
@@ -48,7 +49,9 @@ object TriggerExample {
       // 仅对第一条数据注册定时器
       // 这里的定时器指的是：onEventTime函数！
       if (!firstSeen.value()) {
-        // 如果当前水位线是1234ms，那么t = 1234 + (1000 - 1234 % 1000) = 2000
+        // 第一条数据`a 1234`来的时候，水位线是：-9223372036854775808
+        // 过了200ms，插入了一个水位线1234 - 1 = 1233
+        // 水位线后面的整数秒是：-9223372036854774000
         println("第一条数据来了！当前水位线是：" + ctx.getCurrentWatermark)
         val t = ctx.getCurrentWatermark + (1000 - (ctx.getCurrentWatermark % 1000))
         println("第一条数据来了以后，注册的定时器的整数秒的时间戳是：" + t)
@@ -63,18 +66,23 @@ object TriggerExample {
       TriggerResult.CONTINUE
     }
 
+    // 定时器函数，在水位线到达time时，触发
     override def onEventTime(time: Long, window: TimeWindow, ctx: TriggerContext): TriggerResult = {
       // 在onElement函数中，我们注册过窗口结束时间的定时器
       if (time == window.getEnd) {
         // 在窗口闭合时，触发计算并清空窗口
         TriggerResult.FIRE_AND_PURGE
       } else {
-
+        // 1233ms后面的整数秒是2000ms
         val t = ctx.getCurrentWatermark + (1000 - (ctx.getCurrentWatermark % 1000))
+        // 保证t小于窗口结束时间
         if (t < window.getEnd) {
           println("注册的定时器的整数秒的时间戳是：" + t)
+          // 这里注册的定时器还是onEventTime函数
           ctx.registerEventTimeTimer(t)
         }
+        // 触发窗口计算
+        println("在 " + time + " 触发了窗口计算！")
         TriggerResult.FIRE
       }
     }
